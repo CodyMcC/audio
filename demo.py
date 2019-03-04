@@ -82,7 +82,7 @@ def print_bars(data):
             tmp_volume -= 10
         while diff_volume > 0:
             print(" ", end="")
-            diff_volume -= 10˚
+            diff_volume -= 10
 
         print("|")
 
