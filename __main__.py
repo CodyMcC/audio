@@ -10,66 +10,12 @@ import threading
 import time
 
 
-# Globals
-run = True  # thread kill switch
-
-
-
-
-
-
-
-
 def print_ranges():
     for key in pitch_map.keys():
         print(f"{pitch_map[key]}: {data_dict[key]['max_volume']:.2f} {data_dict[key]['max_last']:.2f}")
     print()
 
 
-
-
-
-def main():
-    global run
-    global data_dict
-    
-
-    five_sec = 0
-    one_sec = 0
-    tenth_sec = 0.0
-
-    small_list_count = 0
-
-    try:
-        while True:
-            run_time = time.time() - start_time
-
-            # 0.1 seconds
-            if run_time + 0.05 > tenth_sec:
-                tenth_sec += 0.05
-                # print(len(pitch_list))
-                # print_ranges()
-                if len(volume_list) < 20:
-                    small_list_count += 1
-                print(len(volume_list), small_list_count)
-                audio_obj.update_pitch_list()
-                audio_obj.data_dict # to use it 
-                print_bars(data_dict)
-
-
-
-            # 1 Second
-            if run_time + 1 > one_sec:
-                one_sec += 1
-
-            # 5 Seconds
-            if run_time + 5 > five_sec:
-                five_sec += 5
-            #run = False
-            #sys.exit()
-    except KeyboardInterrupt:
-        run = False
-        sys.exit()
 
 class AudioProcessor():
     """
@@ -277,6 +223,48 @@ class AudioProcessor():
         stream.stop_stream()
         stream.close()
         p.terminate()
+
+
+def main():
+    
+    five_sec = 0
+    one_sec = 0
+    tenth_sec = 0.0
+
+    small_list_count = 0
+    
+    audio_obj = AudioProcessor()
+
+    try:
+        while True:
+            run_time = time.time() - start_time
+
+            # 0.1 seconds
+            if run_time + 0.05 > tenth_sec:
+                tenth_sec += 0.05
+                # print(len(pitch_list))
+                # print_ranges()
+                if len(volume_list) < 20:
+                    small_list_count += 1
+                print(len(volume_list), small_list_count)
+                audio_obj.update()
+                audio_obj.data_dict # to use it 
+                audio_obj.print_bars()
+
+
+
+            # 1 Second
+            if run_time + 1 > one_sec:
+                one_sec += 1
+
+            # 5 Seconds
+            if run_time + 5 > five_sec:
+                five_sec += 5
+            #run = False
+            #sys.exit()
+    except KeyboardInterrupt:
+        run = False
+        sys.exit()
 
 
 if __name__ == "__main__":
