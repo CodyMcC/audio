@@ -28,19 +28,19 @@ class AudioProcessor():
     
     """
     
-    def __init__():
+    def __init__(self):
         self.volume_list = []
         self.pitch_list = []
-        self.capture_error_count
-        
-        self.pitch_map = setup_pitch_map()
-        self.data_dict = setup_data_dict()
+        self.capture_error_count = 0
+        self.run = True        
+        self.pitch_map = self.setup_pitch_map()
+        self.data_dict = self.setup_data_dict()
         
         capture_thread = threading.Thread(target=self.capture)
         capture_thread.start()
         self.start_time = time.time()
         
-    def setup_pitch_map():
+    def setup_pitch_map(self):
         # TODO make this flexible
         """
         #     Frequency (Hz)	Octave	Description
@@ -69,7 +69,7 @@ class AudioProcessor():
             "p11": 32768  # 11th Beyond brilliance, nebulous sounds approaching and just passing the upper human threshold of hearing
         }
         
-    def setup_data_dict():
+    def setup_data_dict(self):
         # TODO make flexible: dict_copy = copy.deepcopy(my_dict)
         # TODO define each of the dict keys
         # current_volume: UNUSED
@@ -91,12 +91,12 @@ class AudioProcessor():
         'p11': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0}
         }
     
-    def print_bars():
+    def print_bars(self):
         print()
         print()
         os.system('clear')
         for key in self.pitch_map.keys():
-            print(f'{pitch_map[key]:7d}|', end='')
+            print(f'{self.pitch_map[key]:7d}|', end='')
     
             tmp_volume = self.data_dict[key]["max_volume"]
             diff_volume = self.data_dict[key]["floating_max"] - tmp_volume
@@ -212,8 +212,8 @@ class AudioProcessor():
     
                 volume = (np.sum(signal ** 2) / len(signal)) * 10000
     
-                volume_list.append(volume)
-                pitch_list.append(pitch)
+                self.volume_list.append(volume)
+                self.pitch_list.append(pitch)
     
             except KeyboardInterrupt:
                 print("*** Ctrl+C pressed, exiting")
@@ -237,16 +237,16 @@ def main():
 
     try:
         while True:
-            run_time = time.time() - start_time
+            run_time = time.time() - audio_obj.start_time
 
             # 0.1 seconds
             if run_time + 0.05 > tenth_sec:
                 tenth_sec += 0.05
                 # print(len(pitch_list))
                 # print_ranges()
-                if len(volume_list) < 20:
+                if len(audio_obj.volume_list) < 20:
                     small_list_count += 1
-                print(len(volume_list), small_list_count)
+                print(len(audio_obj.volume_list), small_list_count)
                 audio_obj.update()
                 audio_obj.data_dict # to use it 
                 audio_obj.print_bars()
