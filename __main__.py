@@ -2,6 +2,7 @@
 
 import aubio
 import copy
+import logging
 import numpy as np
 import os
 import pyaudio
@@ -16,6 +17,40 @@ def print_ranges():
     print()
 
 
+class FPS:
+
+    """
+    Usage:
+    fps = FPS(30)
+    while True:
+        fps.maintain()
+    """
+
+    def __init__(self, target_fps):
+        self.one_sec = 0 # moves every second
+        self.sleep_fps = .005 # Guess!
+        self.loop_count = 0 # to track FPS
+        self.start_time = time.time()
+        self.target_fps = target_fps
+        self.true_fps = target_fps
+
+    def maintain(self):
+        elapsed_time = time.time() - self.start_time
+        self.loop_count += 1
+        if self.one_sec < elapsed_time:
+            logging.debug(f"FPS: {self.true_fps} - sleep: {self.sleep_fps}")
+            self.one_sec += 1
+            self.true_fps = self.loop_count
+            # print options.fps
+            # print ("Loops per sec: %i") % loopCount
+                    
+            if self.true_fps < self.target_fps - 2:
+                self.sleep_fps *= .95
+            elif self.true_fps > self.target_fps + 2:
+                self.sleep_fps *= 1.05
+            self.loop_count = 0
+        time.sleep(self.sleep_fps)
+
 
 class AudioProcessor():
     """
@@ -28,78 +63,106 @@ class AudioProcessor():
     
     """
     
-    def __init__(self):
+    def __init__(self, num_pitch_ranges = None, start = True):
+        # self.logger = logging.getLogger('audio_processing.AudioProcessor')
+        # self.logger.info('creating an instance of AudioProcessor')
+
         self.volume_list = []
         self.pitch_list = []
         self.capture_error_count = 0
         self.run = True        
-        self.pitch_map = self.setup_pitch_map()
-        self.data_dict = self.setup_data_dict()
-        
-        capture_thread = threading.Thread(target=self.capture)
+        self.pitch_map = self._setup_pitch_map(num_pitch_ranges)
+        self.data_dict = self._setup_data_dict(len(self.pitch_map))
+        if start:
+            self.start_capturing()        
+
+
+    def start_capturing(self):    
+        capture_thread = threading.Thread(target=self._capture)
         capture_thread.start()
         self.start_time = time.time()
+
+    def mapping(self, input_min, input_max, output_min, output_max, val):
         
-    def setup_pitch_map(self):
+        if val < input_min:
+            val = input_min
+        if val > input_max:
+            val = input_max
+        
+        return (val - input_min) / (input_max - input_min) * (output_max - output_min) + output_min
+            
+    def _setup_pitch_map(self, num):
         # TODO make this flexible
         """
-        #     Frequency (Hz)	Octave	Description
-        16 to 32	1st	The lower human threshold of hearing, and the lowest pedal notes of a pipe organ.
-        32 to 512	2nd to 5th	Rhythm frequencies, where the lower and upper bass notes lie.
-        512 to 2048	6th to 7th	Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
-        2048 to 8192	8th to 9th	Gives presence to speech, where labial and fricative sounds puss.
-        8192 to 16384	10th	Brilliance, the sounds of bells and the ringing of cymbals and sibilance in speech.
-        16384 to 32768 11th Beyond brilliance, nebulous sounds approaching and just passing the upper human threshold of hearing
+        #     Frequency (Hz)    Octave  Description
+        16 to 32
+            1st The lower human threshold of hearing, and the lowest pedal notes of a pipe organ.
+        32 to 512
+            2nd to 5th Rhythm frequencies, where the lower and upper bass notes lie.
+        512 to 2048
+            6th to 7th Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
+        2048 to 8192
+            8th to 9th Gives presence to speech, where labial and fricative sounds puss.
+        8192 to 16384   
+            10th Brilliance, the sounds of bells and the ringing of cymbals and sibilance in speech.
+        16384 to 32768 
+            11th Beyond brilliance, nebulous sounds approaching and just passing the upper human threshold of hearing
         #
         # Map
         # Everything lower than the number is included
         """
+
+        # https://courses.physics.illinois.edu/phys406/sp2017/Lab_Handouts/Octave_Bands.pdf
+        bands = [22, 44, 88, 176, 353, 707, 1414, 2828, 5656, 11313, 22627]
+        data = []
+
+
+
+        if num is None:
+            return bands
         
-        return {
-            "p1": 32,
-            "p2": 64,  # 2nd to 5th	Rhythm frequencies, where the lower and upper bass notes lie.
-            "p3": 256,  # 2nd to 5th	Rhythm frequencies, where the lower and upper bass notes lie.
-            "p4": 512,  # 2nd to 5th	Rhythm frequencies, where the lower and upper bass notes lie.
-            "p5": 1024,  # 6th to 7th	Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
-            "p6": 2048,  # 6th to 7th	Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
-            "p7": 4096,  # 6th to 7th	Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
-            "p8": 8192,  # 6th to 7th	Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
-            "p9": 12000,  # 10th	Brilliance, the sounds of bells and the ringing of cymbals and sibilance in speech.
-            "p10": 16384,  # 10th	Brilliance, the sounds of bells and the ringing of cymbals and sibilance in speech.
-            "p11": 32768  # 11th Beyond brilliance, nebulous sounds approaching and just passing the upper human threshold of hearing
-        }
+        # TODO Handle the extras
+
+        # Number of freq groups per band
+        per_band = int(num / (len(bands) - 1))
+
         
-    def setup_data_dict(self):
+        for index in range(len(bands) - 1):   
+            
+            step = bands[index] / per_band  # 
+            for i in range(per_band):
+                data.append(int(bands[index] + step * i)) 
+
+        logging.debug(f"per_band: {per_band}")
+        for index in range(len(data)):
+            logging.debug(str(index) + ": " + str(data[index]))
+
+        return data
+ 
+    def _setup_data_dict(self, num):
         # TODO make flexible: dict_copy = copy.deepcopy(my_dict)
         # TODO define each of the dict keys
         # current_volume: UNUSED
         # max_volume: The max volume for a given pitch in the range
         # pitch:
         # max_last: The max volume seen last time pitch_updater was ran
-        # floating_max: slowly decreases to 0 unless max_volume is higher
-        return {
-        'p1': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p2': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p3': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p4': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p5': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p6': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p7': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p8': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p9': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p10': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0},
-        'p11': {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "floating_max": 0}
-        }
+        # falling_max: slowly decreases to 0 unless max_volume is higher
+
+        dict = {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "falling_max": 0}
+        data = []
+        for i in range(num):
+            data.append(copy.deepcopy(dict))
+        return data
     
     def print_bars(self):
         print()
         print()
         os.system('clear')
-        for key in self.pitch_map.keys():
-            print(f'{self.pitch_map[key]:7d}|', end='')
+        for index in range(len(self.pitch_map)):
+            print(f'{self.pitch_map[index]:7d}|', end='')
     
-            tmp_volume = self.data_dict[key]["max_volume"]
-            diff_volume = self.data_dict[key]["floating_max"] - tmp_volume
+            tmp_volume = self.data_dict[index]["max_volume"]
+            diff_volume = self.data_dict[index]["falling_max"] - tmp_volume
     
             if tmp_volume > 750:
                 tmp_volume = 750
@@ -119,43 +182,38 @@ class AudioProcessor():
     
     def update(self) -> dict:
         """Takes a list of pitches and volumes and finds the max volume for each pitch range"""
-    
+        
         # Move all of the max_volume data to max_last and reset max_volume to 0
-        for key in self.data_dict.keys():
-            self.data_dict[key]["max_last"] = self.data_dict[key]["max_volume"]
-            self.data_dict[key]["max_volume"] = 0
-    
-            if self.data_dict[key]["max_last"] > self.data_dict[key]["floating_max"]:
-                self.data_dict[key]["floating_max"] = self.data_dict[key]["max_last"]
+        for index in range(len(self.data_dict)):
+            self.data_dict[index]["max_last"] = self.data_dict[index]["max_volume"]
+            self.data_dict[index]["max_volume"] = 0
+            
+            # Calculate falling_max
+            if self.data_dict[index]["max_last"] > self.data_dict[index]["falling_max"]:
+                self.data_dict[index]["falling_max"] = self.data_dict[index]["max_last"]
             else:
-                if (self.data_dict[key]["floating_max"] / 6) > self.data_dict[key]["max_last"]:
-                    self.data_dict[key]["floating_max"] -= 25
-                elif (self.data_dict[key]["floating_max"] / 2) > self.data_dict[key]["max_last"]:
-                    self.data_dict[key]["floating_max"] -= 5
-                else:
-                    self.data_dict[key]["floating_max"] -= 2.5
-    
-                # position = 0  # Keep track of position in volume_list and pitch_list
-        #
+                self.data_dict[index]['falling_max'] *= .7        
+        
         # If the buffer overflows, it is possible for the lists not to be equal in length,
         # by using the shorter list there is no risk of index error
     
         # Loop through each of the gathered volume samples
         for position in range(len(min(self.pitch_list, self.volume_list))):
-            for key in self.pitch_map.keys():
-    
-                if self.pitch_list[position] < self.pitch_map[key]:
-                    if self.volume_list[position] > self.data_dict[key]["max_volume"]:
-                        self.data_dict[key]["max_volume"] = self.volume_list[position]
-                    break  # Only if a match is found in the pitch_map
-    
+            for index in range(len(self.pitch_map)):
+                try: 
+                    if self.pitch_list[position] < self.pitch_map[index]:
+                        if self.volume_list[position] > self.data_dict[index]["max_volume"]:
+                            self.data_dict[index]["max_volume"] = self.volume_list[position]
+                        break  # Only if a match is found in the pitch_map
+                except IndexError:
+                    pass 
         self.volume_list[:] = []  # empty the list
         self.pitch_list[:] = []  # empty the list
     
         return self.data_dict
 
-    def capture(self):
-        """Constantly adds to pitch_list and volume_list untill cleared by update"""
+    def _capture(self):
+        """Constantly adds to pitch_list and volume_list untill cleared by self.update()"""
         # TODO Add more optional paramaters
         
         start_time = time.time()
