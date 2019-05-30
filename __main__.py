@@ -75,7 +75,8 @@ class AudioProcessor():
         self.data_dict = self._setup_data_dict(len(self.pitch_map))
         if start:
             self.start_capturing()        
-
+        self.max_calc_volume = 100
+        self.max_volume_list = []
 
     def start_capturing(self):    
         capture_thread = threading.Thread(target=self._capture)
@@ -94,19 +95,6 @@ class AudioProcessor():
     def _setup_pitch_map(self, num):
         # TODO make this flexible
         """
-        #     Frequency (Hz)    Octave  Description
-        16 to 32
-            1st The lower human threshold of hearing, and the lowest pedal notes of a pipe organ.
-        32 to 512
-            2nd to 5th Rhythm frequencies, where the lower and upper bass notes lie.
-        512 to 2048
-            6th to 7th Defines human speech intelligibility, gives a horn-like or tinny quality to sound.
-        2048 to 8192
-            8th to 9th Gives presence to speech, where labial and fricative sounds puss.
-        8192 to 16384   
-            10th Brilliance, the sounds of bells and the ringing of cymbals and sibilance in speech.
-        16384 to 32768 
-            11th Beyond brilliance, nebulous sounds approaching and just passing the upper human threshold of hearing
         #
         # Map
         # Everything lower than the number is included
@@ -179,6 +167,25 @@ class AudioProcessor():
                 diff_volume -= 10
     
             print("|")
+
+    def _update_max_volume(self):
+        """
+        Keeps track of the max volume, updating it incrementally over time
+        """       
+        
+        max_volume_found = max(self.max_volume_list)
+        self.max_volume_list[:] = []
+        if max_volume_found > self.max_calc_volume * 2: #if the max is way off, help it get there faster
+            self.max_calc_volume *= 1.9
+        
+        #Aim to be about a third higher than the average max
+        if max_volume_found > 2:  # if no audio is playing, don't adjust
+            if max_volume_found + (max_volume_found * .3) > self.max_calc_volume:
+                self.max_calc_volume *= 1.1
+            if max_volume_found + (max_volume_found * .3) < self.max_calc_volume:
+                self.max_calc_volume *= .75
+
+        logging.debug(f"The calc max volume is: {self.max_calc_volume}")
     
     def update(self) -> dict:
         """Takes a list of pitches and volumes and finds the max volume for each pitch range"""
@@ -207,6 +214,14 @@ class AudioProcessor():
                         break  # Only if a match is found in the pitch_map
                 except IndexError:
                     pass 
+
+        try:
+            self.max_volume_list.append(max(self.volume_list))
+        except ValueError:
+            pass
+        if len(self.max_volume_list) > 120: 
+            self._update_max_volume()
+
         self.volume_list[:] = []  # empty the list
         self.pitch_list[:] = []  # empty the list
     
@@ -268,7 +283,7 @@ class AudioProcessor():
                 pitch = pitch_o(signal)[0]
                 # confidence = pitch_o.get_confidence()
     
-                volume = (np.sum(signal ** 2) / len(signal)) * 10000
+                volume = (np.sum(signal ** 2) / len(signal)) * 100
     
                 self.volume_list.append(volume)
                 self.pitch_list.append(pitch)
