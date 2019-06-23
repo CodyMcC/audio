@@ -55,7 +55,7 @@ class FPS:
 class AudioProcessor():
     """
     Usage:
-    audio_obj = audioProcessor()
+    audio_obj = AudioProcessor()
     while True:
         can_save_data = audio_obj.update() -> returns self.data_dict
         audio_obj.data_dict
@@ -77,13 +77,23 @@ class AudioProcessor():
             self.start_capturing()        
         self.max_calc_volume = 100
         self.max_volume_list = []
+        self.capture_thread = None
+        self.start_time = 0
 
-    def start_capturing(self):    
-        capture_thread = threading.Thread(target=self._capture)
-        capture_thread.start()
+    def start_capturing(self):
+        self.run = True
+        self.capture_thread = threading.Thread(target=self._capture)
+        self.capture_thread.start()
         self.start_time = time.time()
 
-    def mapping(self, input_min, input_max, output_min, output_max, val):
+    def stop_capturing(self):
+        self.run = False
+        if not self.capture_thread.isAlive():
+            self.capture_thread = threading.Thread(target=self._capture)
+            self.capture_thread.start()
+
+    @staticmethod
+    def mapping(input_min, input_max, output_min, output_max, val):
         
         if val < input_min:
             val = input_min
@@ -126,20 +136,20 @@ class AudioProcessor():
             logging.debug(str(index) + ": " + str(data[index]))
 
         return data
- 
-    def _setup_data_dict(self, num):
-        # TODO make flexible: dict_copy = copy.deepcopy(my_dict)
-        # TODO define each of the dict keys
+
+    @staticmethod
+    def _setup_data_dict(num):
+
         # current_volume: UNUSED
         # max_volume: The max volume for a given pitch in the range
         # pitch:
         # max_last: The max volume seen last time pitch_updater was ran
         # falling_max: slowly decreases to 0 unless max_volume is higher
 
-        dict = {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "falling_max": 0}
+        data_dict = {"current_volume": 0, "max_volume": 0, "pitch": 0, "max_last": 0, "falling_max": 0}
         data = []
         for i in range(num):
-            data.append(copy.deepcopy(dict))
+            data.append(copy.deepcopy(data_dict))
         return data
     
     def print_bars(self):
