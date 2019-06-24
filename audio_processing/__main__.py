@@ -218,7 +218,9 @@ class AudioProcessor:
     
     def update(self) -> dict:
         """Takes a list of pitches and volumes and finds the max volume for each pitch range"""
-        
+
+        self.start_capturing()  # Just double check that it is running
+
         # Move all of the max_volume data to max_last and reset max_volume to 0
         for index in range(len(self.data_dict)):
             self.data_dict[index]["max_last"] = self.data_dict[index]["max_volume"]
