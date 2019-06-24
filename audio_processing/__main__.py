@@ -10,11 +10,10 @@ import sys
 import threading
 import time
 
-
-def print_ranges():
-    for key in pitch_map.keys():
-        print(f"{pitch_map[key]}: {data_dict[key]['max_volume']:.2f} {data_dict[key]['max_last']:.2f}")
-    print()
+# def print_ranges():
+#     for key in pitch_map.keys():
+#         print(f"{pitch_map[key]}: {data_dict[key]['max_volume']:.2f} {data_dict[key]['max_last']:.2f}")
+#     print()
 
 
 class FPS:
@@ -26,19 +25,22 @@ class FPS:
         fps.maintain()
     """
 
-    def __init__(self, target_fps):
+    def __init__(self, target_fps, name='FPS'):
+        self.logger = logging.getLogger(f'audio_processor.{name}')
+        self.logger.info('creating an instance of FPS')
         self.one_sec = 0 # moves every second
         self.sleep_fps = .005 # Guess!
         self.loop_count = 0 # to track FPS
         self.start_time = time.time()
         self.target_fps = target_fps
         self.true_fps = target_fps
+        self.elapsed = 0
 
     def maintain(self):
-        elapsed_time = time.time() - self.start_time
+        self.elapsed = time.time() - self.start_time
         self.loop_count += 1
-        if self.one_sec < elapsed_time:
-            logging.debug(f"FPS: {self.true_fps} - sleep: {self.sleep_fps}")
+        if self.one_sec < self.elapsed:
+            self.logger.debug(f"FPS: {self.true_fps} - sleep: {self.sleep_fps}")
             self.one_sec += 1
             self.true_fps = self.loop_count
             # print options.fps
@@ -52,7 +54,7 @@ class FPS:
         time.sleep(self.sleep_fps)
 
 
-class AudioProcessor():
+class AudioProcessor:
     """
     Usage:
     audio_obj = AudioProcessor()
@@ -63,9 +65,10 @@ class AudioProcessor():
     
     """
     
-    def __init__(self, num_pitch_ranges = None, start = True):
+    def __init__(self, num_pitch_ranges=None, start=True, name='AudioProcessor'):
         # self.logger = logging.getLogger('audio_processing.AudioProcessor')
-        # self.logger.info('creating an instance of AudioProcessor')
+        self.logger = logging.getLogger(f'audio_processor.{name}')
+        self.logger.info('creating an instance of AudioProcessor')
 
         self.volume_list = []
         self.pitch_list = []
@@ -73,24 +76,24 @@ class AudioProcessor():
         self.run = True        
         self.pitch_map = self._setup_pitch_map(num_pitch_ranges)
         self.data_dict = self._setup_data_dict(len(self.pitch_map))
+        self.capture_thread = threading.Thread(target=self._capture)
         if start:
             self.start_capturing()        
         self.max_calc_volume = 100
         self.max_volume_list = []
-        self.capture_thread = None
+
         self.start_time = 0
 
     def start_capturing(self):
         self.run = True
-        self.capture_thread = threading.Thread(target=self._capture)
-        self.capture_thread.start()
+        if not self.capture_thread.isAlive():
+            self.capture_thread = threading.Thread(target=self._capture)
+            self.capture_thread.start()
         self.start_time = time.time()
 
     def stop_capturing(self):
         self.run = False
-        if not self.capture_thread.isAlive():
-            self.capture_thread = threading.Thread(target=self._capture)
-            self.capture_thread.start()
+
 
     @staticmethod
     def mapping(input_min, input_max, output_min, output_max, val):
@@ -101,41 +104,57 @@ class AudioProcessor():
             val = input_max
         
         return (val - input_min) / (input_max - input_min) * (output_max - output_min) + output_min
+
+    @staticmethod
+    def scale(val, src, dst):
+        """
+        Scale the given value from the scale of src to the scale of dst.
+        """
+        return ((val - src[0]) / (src[1] - src[0])) * (dst[1] - dst[0]) + dst[0]
             
     def _setup_pitch_map(self, num):
-        # TODO make this flexible
         """
         #
         # Map
         # Everything lower than the number is included
+        # minimum number of ranges is 11
         """
 
         # https://courses.physics.illinois.edu/phys406/sp2017/Lab_Handouts/Octave_Bands.pdf
         bands = [22, 44, 88, 176, 353, 707, 1414, 2828, 5656, 11313, 22627]
+        extras_order = [5, 4, 6, 3, 7, 2, 8, 1, 9, 0]
         data = []
-
-
 
         if num is None:
             return bands
-        
-        # TODO Handle the extras
+        if num < 11:
+            num = 11
 
         # Number of freq groups per band
-        per_band = int(num / (len(bands) - 1))
+        per_band = int(num / len(bands))
+        self.logger.debug(f'per_band: {per_band}')
 
-        
-        for index in range(len(bands) - 1):   
-            
-            step = bands[index] / per_band  # 
-            for i in range(per_band):
-                data.append(int(bands[index] + step * i)) 
+        missing_count = num - (per_band * len(bands))
+        self.logger.debug(f'missing_count: {missing_count}')
 
-        logging.debug(f"per_band: {per_band}")
-        for index in range(len(data)):
-            logging.debug(str(index) + ": " + str(data[index]))
+        freq_per_band = [per_band] * len(bands)
 
+
+        # Add the missing count across the center of the bands
+        for index in range(missing_count):
+            freq_per_band[extras_order[index]] += 1
+        self.logger.debug(f'freq_per_band: {freq_per_band}')
+
+        for index in range(len(bands)):
+
+            step = bands[index] / freq_per_band[index]
+            for num_steps in range(freq_per_band[index]):
+                data.append(int(bands[index] + step * num_steps))
+
+        self.logger.debug(f"per_band: {per_band}")
+        self.logger.debug(f'freq ranges: {data}')
         return data
+
 
     @staticmethod
     def _setup_data_dict(num):
@@ -195,7 +214,7 @@ class AudioProcessor():
             if max_volume_found + (max_volume_found * .3) < self.max_calc_volume:
                 self.max_calc_volume *= .75
 
-        logging.debug(f"The calc max volume is: {self.max_calc_volume}")
+        self.logger.debug(f"The calc max volume is: {self.max_calc_volume}")
     
     def update(self) -> dict:
         """Takes a list of pitches and volumes and finds the max volume for each pitch range"""
