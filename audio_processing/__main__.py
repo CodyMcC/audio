@@ -6,14 +6,8 @@ import logging
 import numpy as np
 import os
 import pyaudio
-import sys
 import threading
 import time
-
-# def print_ranges():
-#     for key in pitch_map.keys():
-#         print(f"{pitch_map[key]}: {data_dict[key]['max_volume']:.2f} {data_dict[key]['max_last']:.2f}")
-#     print()
 
 
 class FPS:
@@ -94,9 +88,9 @@ class AudioProcessor:
     def stop_capturing(self):
         self.run = False
 
-
     @staticmethod
     def mapping(input_min, input_max, output_min, output_max, val):
+        # TODO: This function is being replaced with scale()
         
         if val < input_min:
             val = input_min
@@ -113,6 +107,7 @@ class AudioProcessor:
         return ((val - src[0]) / (src[1] - src[0])) * (dst[1] - dst[0]) + dst[0]
             
     def _setup_pitch_map(self, num):
+        # TODO: This function needs simplification
         """
         #
         # Map
@@ -139,7 +134,6 @@ class AudioProcessor:
 
         freq_per_band = [per_band] * len(bands)
 
-
         # Add the missing count across the center of the bands
         for index in range(missing_count):
             freq_per_band[extras_order[index]] += 1
@@ -154,7 +148,6 @@ class AudioProcessor:
         self.logger.debug(f"per_band: {per_band}")
         self.logger.debug(f'freq ranges: {data}')
         return data
-
 
     @staticmethod
     def _setup_data_dict(num):
@@ -204,10 +197,10 @@ class AudioProcessor:
         
         max_volume_found = max(self.max_volume_list)
         self.max_volume_list[:] = []
-        if max_volume_found > self.max_calc_volume * 2: #if the max is way off, help it get there faster
+        if max_volume_found > self.max_calc_volume * 2:  # if the max is way off, help it get there faster
             self.max_calc_volume *= 1.9
         
-        #Aim to be about a third higher than the average max
+        # Aim to be about a third higher than the average max
         if max_volume_found > 2:  # if no audio is playing, don't adjust
             if max_volume_found + (max_volume_found * .3) > self.max_calc_volume:
                 self.max_calc_volume *= 1.1
@@ -259,10 +252,8 @@ class AudioProcessor:
         return self.data_dict
 
     def _capture(self):
-        """Constantly adds to pitch_list and volume_list untill cleared by self.update()"""
+        """Constantly adds to pitch_list and volume_list until cleared by self.update()"""
         # TODO Add more optional paramaters
-        
-        start_time = time.time()
     
         # initialise pyaudio
         p = pyaudio.PyAudio()
@@ -290,13 +281,10 @@ class AudioProcessor:
     
         self.capture_error_count = 0
         while self.run:
-    
-            # TODO is this even used?
-            run_time = time.time() - start_time
-    
+
             try:
                 # try:
-                audiobuffer = stream.read(buffer_size, exception_on_overflow = False)
+                audiobuffer = stream.read(buffer_size, exception_on_overflow=False)
     
                 # except OSError:
                 #     # if ex[1] != pyaudio.paInputOverflowed:
@@ -312,8 +300,7 @@ class AudioProcessor:
                 signal = np.frombuffer(audiobuffer, dtype=np.float32)
     
                 pitch = pitch_o(signal)[0]
-                # confidence = pitch_o.get_confidence()
-    
+
                 volume = (np.sum(signal ** 2) / len(signal)) * 100
     
                 self.volume_list.append(volume)
@@ -330,45 +317,16 @@ class AudioProcessor:
 
 
 def main():
-    
-    five_sec = 0
-    one_sec = 0
-    tenth_sec = 0.0
+    audio_o = AudioProcessor()
+    fps = FPS(30)
 
-    small_list_count = 0
-    
-    audio_obj = AudioProcessor()
-
-    try:
-        while True:
-            run_time = time.time() - audio_obj.start_time
-
-            # 0.1 seconds
-            if run_time + 0.05 > tenth_sec:
-                tenth_sec += 0.05
-                # print(len(pitch_list))
-                # print_ranges()
-                if len(audio_obj.volume_list) < 20:
-                    small_list_count += 1
-                print(len(audio_obj.volume_list), small_list_count)
-                audio_obj.update()
-                audio_obj.data_dict # to use it 
-                audio_obj.print_bars()
-
-
-
-            # 1 Second
-            if run_time + 1 > one_sec:
-                one_sec += 1
-
-            # 5 Seconds
-            if run_time + 5 > five_sec:
-                five_sec += 5
-            #run = False
-            #sys.exit()
-    except KeyboardInterrupt:
-        run = False
-        sys.exit()
+    while True:
+        try:
+            fps.maintain()
+            audio_o.update()
+            audio_o.print_bars()
+        except KeyboardInterrupt:
+            break
 
 
 if __name__ == "__main__":
