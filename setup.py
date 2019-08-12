@@ -21,9 +21,9 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
 
-    name='ledwall',  # Required
+    name='audio_processing',  # Required
     version='1',  # Required
-    description='Controlls LED wall',  # Optional
+    description='',  # Optional
 
     # This should be a valid link to your project's main homepage.
     #
