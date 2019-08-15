@@ -267,7 +267,7 @@ class AudioProcessor:
         print(1)
     
         # open stream
-        buffer_size = 32
+        buffer_size = 64
         pyaudio_format = pyaudio.paFloat32
         print(2)
         n_channels = 1
@@ -290,13 +290,17 @@ class AudioProcessor:
         print("*** starting recording")
     
         self.capture_error_count = 0
+        loop_count = 0
 
         while self.run:
+            loop_count += 1
 
             try:
                 # try:
-                print('loop...')
+                print(f'loop...{loop_count}')
+
                 audiobuffer = stream.read(buffer_size, exception_on_overflow=True)
+
                 print('loop 1')
     
                 # except OSError:
