@@ -295,7 +295,8 @@ class AudioProcessor:
 
             try:
                 # try:
-                audiobuffer = stream.read(buffer_size, exception_on_overflow=False)
+                print('loop...')
+                audiobuffer = stream.read(buffer_size, exception_on_overflow=True)
                 print('loop 1')
     
                 # except OSError:
