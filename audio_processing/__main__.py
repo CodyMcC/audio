@@ -211,11 +211,11 @@ class AudioProcessor:
     
     def update(self) -> dict:
         """Takes a list of pitches and volumes and finds the max volume for each pitch range"""
-        print(4)
+        # print(4)
 
         self.start_capturing()  # Just double check that it is running
 
-        print(5)
+        # print(5)
 
         # Move all of the max_volume data to max_last and reset max_volume to 0
         for index in range(len(self.data_dict)):
@@ -228,7 +228,7 @@ class AudioProcessor:
             else:
                 self.data_dict[index]['falling_max'] *= .7        
 
-        print(6)
+        # print(6)
 
         # If the buffer overflows, it is possible for the lists not to be equal in length,
         # by using the shorter list there is no risk of index error
@@ -251,7 +251,7 @@ class AudioProcessor:
         if len(self.max_volume_list) > 120: 
             self._update_max_volume()
 
-        print(7)
+        # print(7)
 
         self.volume_list[:] = []  # empty the list
         self.pitch_list[:] = []  # empty the list
@@ -296,6 +296,7 @@ class AudioProcessor:
             try:
                 # try:
                 audiobuffer = stream.read(buffer_size, exception_on_overflow=False)
+                print('loop 1')
     
                 # except OSError:
                 #     # if ex[1] != pyaudio.paInputOverflowed:
@@ -309,13 +310,15 @@ class AudioProcessor:
                     # print(e)
     
                 signal = np.frombuffer(audiobuffer, dtype=np.float32)
-    
+                print('loop 2')
                 pitch = pitch_o(signal)[0]
-
+                print('loop 3')
                 volume = (np.sum(signal ** 2) / len(signal)) * 100
-    
+                print('loop 4')
                 self.volume_list.append(volume)
+                print('loop 5')
                 self.pitch_list.append(pitch)
+                print('loop 6')
     
             except KeyboardInterrupt:
                 print("*** Ctrl+C pressed, exiting")
