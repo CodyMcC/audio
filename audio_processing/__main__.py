@@ -257,10 +257,12 @@ class AudioProcessor:
     
         # initialise pyaudio
         p = pyaudio.PyAudio()
+        print(1)
     
         # open stream
         buffer_size = 32
         pyaudio_format = pyaudio.paFloat32
+        print(2)
         n_channels = 1
         samplerate = 44100
         stream = p.open(format=pyaudio_format,
@@ -268,6 +270,7 @@ class AudioProcessor:
                         rate=samplerate,
                         input=True,
                         frames_per_buffer=buffer_size)
+        print(3)
     
         # setup pitch
         tolerance = 0.8
@@ -280,6 +283,7 @@ class AudioProcessor:
         print("*** starting recording")
     
         self.capture_error_count = 0
+
         while self.run:
 
             try:
