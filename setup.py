@@ -9,4 +9,8 @@ setup(name='AudioProcessing',
       author_email='cody@python.net',
       url='https://www.python.org/',
       packages=['audioprocessing'],
+      entry_points={  # Optional
+            'console_scripts': [
+                  'audiobars = audioprocessing.__main__:main',
+            ],
       )
