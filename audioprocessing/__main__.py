@@ -267,7 +267,7 @@ class AudioProcessor:
         print(1)
     
         # open stream
-        buffer_size = 64
+        buffer_size = 32
         pyaudio_format = pyaudio.paFloat32
         print(2)
         n_channels = 1
@@ -297,12 +297,10 @@ class AudioProcessor:
 
             try:
                 # try:
-                print(f'loop...{loop_count}')
 
-                audiobuffer = stream.read(buffer_size, exception_on_overflow=True)
+                audiobuffer = stream.read(buffer_size, exception_on_overflow=False)
 
-                print('loop 1')
-    
+
                 # except OSError:
                 #     # if ex[1] != pyaudio.paInputOverflowed:
                 #     error_count += 1
@@ -315,16 +313,11 @@ class AudioProcessor:
                     # print(e)
     
                 signal = np.frombuffer(audiobuffer, dtype=np.float32)
-                print('loop 2')
                 pitch = pitch_o(signal)[0]
-                print('loop 3')
                 volume = (np.sum(signal ** 2) / len(signal)) * 100
-                print('loop 4')
                 self.volume_list.append(volume)
-                print('loop 5')
                 self.pitch_list.append(pitch)
-                print('loop 6')
-    
+
             except KeyboardInterrupt:
                 print("*** Ctrl+C pressed, exiting")
                 break
