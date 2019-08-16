@@ -78,6 +78,7 @@ setup(
     entry_points={  # Optional
         'console_scripts': [
             'audio_bars = audioprocessing.__main__:main',
+
         ],
     },
 
