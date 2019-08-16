@@ -77,7 +77,7 @@ setup(
     # executes the function `main` from this package when invoked:
     entry_points={  # Optional
         'console_scripts': [
-            'audio_bars = audioprocessing.__main__:main',
+            'audio_bars = AudioProcessing.__main__:main',
 
         ],
     },
