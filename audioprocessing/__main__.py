@@ -81,12 +81,14 @@ class AudioProcessor:
     def start_capturing(self):
         self.run = True
         if not self.capture_thread.isAlive():
+            print('Starting audio capture Thread')
             self.capture_thread = threading.Thread(target=self._capture)
             self.capture_thread.start()
         self.start_time = time.time()
 
     def stop_capturing(self):
         self.run = False
+        print('Stopping audio capture Thread')
 
     @staticmethod
     def mapping(input_min, input_max, output_min, output_max, val):
@@ -215,8 +217,6 @@ class AudioProcessor:
 
         self.start_capturing()  # Just double check that it is running
 
-        # print(5)
-
         # Move all of the max_volume data to max_last and reset max_volume to 0
         for index in range(len(self.data_dict)):
             self.data_dict[index]["max_last"] = self.data_dict[index]["max_volume"]
@@ -227,8 +227,6 @@ class AudioProcessor:
                 self.data_dict[index]["falling_max"] = self.data_dict[index]["max_last"]
             else:
                 self.data_dict[index]['falling_max'] *= .7        
-
-        # print(6)
 
         # If the buffer overflows, it is possible for the lists not to be equal in length,
         # by using the shorter list there is no risk of index error
@@ -251,7 +249,6 @@ class AudioProcessor:
         if len(self.max_volume_list) > 120: 
             self._update_max_volume()
 
-        # print(7)
 
         self.volume_list[:] = []  # empty the list
         self.pitch_list[:] = []  # empty the list
@@ -264,12 +261,10 @@ class AudioProcessor:
     
         # initialise pyaudio
         p = pyaudio.PyAudio()
-        print(1)
-    
+
         # open stream
         buffer_size = 32
         pyaudio_format = pyaudio.paFloat32
-        print(2)
         n_channels = 1
         samplerate = 44100
         stream = p.open(format=pyaudio_format,
@@ -277,8 +272,7 @@ class AudioProcessor:
                         rate=samplerate,
                         input=True,
                         frames_per_buffer=buffer_size)
-        print(3)
-    
+
         # setup pitch
         tolerance = 0.8
         win_s = 4096  # fft size
