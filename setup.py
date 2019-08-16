@@ -56,7 +56,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    # packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
+    packages=find_packages('.'),  # Required
 
     # Specify which Python versions you support. In contrast to the
     # 'Programming Language' classifiers above, 'pip install' will check this
@@ -90,10 +90,10 @@ setup(
     # issues, where the source is hosted, where to say thanks to the package
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
-    project_urls={  # Optional
-        'Bug Reports': 'https://github.com/pypa/sampleproject/issues',
-        'Funding': 'https://donate.pypi.org',
-        'Say Thanks!': 'http://saythanks.io/to/example',
-        'Source': 'https://github.com/pypa/sampleproject/',
-    },
+    # project_urls={  # Optional
+    #     'Bug Reports': 'https://github.com/pypa/sampleproject/issues',
+    #     'Funding': 'https://donate.pypi.org',
+    #     'Say Thanks!': 'http://saythanks.io/to/example',
+    #     'Source': 'https://github.com/pypa/sampleproject/',
+    # },
 )
