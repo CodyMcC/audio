@@ -13,4 +13,5 @@ setup(name='AudioProcessing',
             'console_scripts': [
                   'audiobars = audioprocessing.__main__:main',
             ],
+      }
       )
