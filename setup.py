@@ -21,7 +21,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
 
-    name='audio_processing',  # Required
+    name='AudioProcessing',  # Required
     version='1',  # Required
     description='',  # Optional
 
@@ -29,7 +29,7 @@ setup(
     #
     # This field corresponds to the "Home-Page" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#home-page-optional
-    url='https://github.com/pypa/sampleproject',  # Optional
+    # url='https://github.com/pypa/sampleproject',  # Optional
 
     # This should be your name or the name of the organization which owns the
     # project.
@@ -56,7 +56,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=find_packages('.'),  # Required
+    packages=['audioprocessing'],  # Required
 
     # Specify which Python versions you support. In contrast to the
     # 'Programming Language' classifiers above, 'pip install' will check this
@@ -77,7 +77,7 @@ setup(
     # executes the function `main` from this package when invoked:
     entry_points={  # Optional
         'console_scripts': [
-            'audio_bars = audio_processing.__main__:main',
+            'audio_bars = AudioProcessing.__main__:main',
         ],
     },
 
