@@ -8,9 +8,14 @@ This package samples live audio and gives the max volume in each of the given pi
 from audioprocessing import *
 
 audio_obj = AudioProcessor(num_pitch_ranges=None)  # Create instance
+
 while True:
-    can_save_data = audio_obj.update()  # Returns self.data_dict
-    audio_obj.data_dict  # Or can just access it directly 
-    audio_obj.print_bars()  # An option to print a graphical representation of the audio
+    try:
+        can_save_data = audio_obj.update()  # Returns self.data_dict
+        audio_obj.data_dict  # Or can just access it directly 
+        audio_obj.print_bars()  # An option to print a graphical representation of the audio
+    except KeyboardInterrupt:
+        break
+    
 ```
 
