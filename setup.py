@@ -8,5 +8,5 @@ setup(name='AudioProcessing',
       author='Cody',
       author_email='cody@python.net',
       url='https://www.python.org/',
-      packages=['audioprocessing'],
+      packages=['AudioProcessing'],
       )
