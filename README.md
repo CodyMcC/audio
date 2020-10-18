@@ -4,6 +4,12 @@ This package was created to simplify the process of audio processing in LED rela
 
 This package samples live audio and gives the max volume in each of the given pitch ranges. 
 
+## Instalation
+First install portaudio
+
+Mac
+`brew install portaudio`
+
 ```python
 from audioprocessing import *
 
